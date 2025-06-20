@@ -5,18 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ultra Wallet Transfer</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .slide-in-left {
+      animation: slide-in 0.4s ease forwards;
+    }
+    @keyframes slide-in {
+      0% { transform: translateX(-100%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+  <div id="customToast" class="hidden fixed top-4 left-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-w-sm z-50"></div>
 
   <div class="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
     <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Send UOS Tokens</h1>
 
-    <form id="transferForm" class="space-y-4">
-      <div>
-        <label for="from" class="block text-sm font-medium text-gray-700">From (your account)</label>
-        <input type="text" id="from" name="from" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm" required />
-      </div>
+    <button onclick="loginWallet()" class="mb-4 w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700">🔐 Connect to Wallet</button>
 
+    <form id="transferForm" class="space-y-4">
       <div>
         <label for="to" class="block text-sm font-medium text-gray-700">To (recipient)</label>
         <input type="text" id="to" name="to" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm" required />
@@ -41,50 +49,100 @@
   </div>
 
   <script>
-    if (document.readyState !== 'complete') {
-  window.addEventListener('load', afterWindowLoaded);
-} else {
-  afterWindowLoaded();
-}
+    // ✅ Toast
+    function showCustomToast(id, messageHtml) {
+      const toast = document.getElementById(id);
+      if (toast) {
+        toast.innerHTML = messageHtml;
+        toast.classList.remove('hidden');
+        toast.classList.add('slide-in-left');
+        setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 6000);
+      }
+    }
 
-   function afterWindowLoaded() {
-  if (!window.ultra) {
-    console.log('❌ Ultra Wallet not detected!');
-    alert("⚠️ Ultra Wallet extension not found.\nPlease install it from: https://ultra.io/download");
-    return;
-  }
-  console.log("✅ Ultra Wallet detected!");
-}
+    // ✅ التحقق من المحفظة
+    function afterWindowLoaded() {
+      if (!window.ultra) {
+        console.log('❌ Ultra Wallet not detected!');
+        showCustomToast('customToast', `
+          <strong class="block mb-1">⚠️ Ultra Wallet extension not found</strong>
+          <span>Please install it from
+            <a href="https://ultra.io/download" target="_blank" class="underline text-white font-bold">ultra.io/download</a>
+          </span>
+        `);
+        return;
+      }
 
+      console.log('✅ Ultra Wallet is available!');
+      checkWallet(); // تحقق من الاتصال
+    }
+
+    // ✅ تحقق من وجود جلسة
+    async function checkWallet() {
+      try {
+        const response = await ultra.connect({ onlyIfTrusted: true });
+        localStorage.setItem('eagerlyConnection', 'true');
+        console.log("✅ Wallet connected: ", response.data.blockchainid);
+      } catch (err) {
+        localStorage.removeItem('eagerlyConnection');
+        showCustomToast('customToast', `
+          <strong class="block mb-1">ℹ️ Not connected</strong>
+          <span>Please connect your Ultra Wallet first.</span>
+        `);
+      }
+    }
+
+    // ✅ تسجيل الدخول
+    async function loginWallet() {
+      try {
+        const response = await ultra.connect({ referralCode: 'ecd1f052-9d0d-4b84-8dd3-10a753d044b5' });
+        localStorage.setItem('eagerlyConnection', 'true');
+        showCustomToast('customToast', `
+          <strong class="block mb-1">✅ Connected!</strong>
+          <span>Wallet ID: ${response.data.blockchainid}</span>
+        `);
+      } catch (err) {
+        console.log("❌ Failed to connect:", err);
+        showCustomToast('customToast', `
+          <strong class="block mb-1">❌ Connection Failed</strong>
+          <span>${err.message || "Could not connect to Ultra Wallet"}</span>
+        `);
+      }
+    }
+
+    // ✅ إرسال المعاملة
     const form = document.getElementById('transferForm');
     const result = document.getElementById('result');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const from = document.getElementById('from').value.trim();
-      const to = document.getElementById('to').value.trim();
-      const amount = document.getElementById('amount').value.trim();
-      const memo = document.getElementById('memo').value.trim();
-
-      // تأكد من وجود محفظة Ultra
       if (!window.ultra) {
         result.textContent = "Ultra Wallet not detected.";
         return;
       }
 
-      const txObject = {
-        action: "transfer",
-        contract: "eosio.token",
-        data: {
-          from,
-          to,
-          quantity: `${parseFloat(amount).toFixed(8)} UOS`,
-          memo
-        }
-      };
+      const to = document.getElementById('to').value.trim();
+      const amount = document.getElementById('amount').value.trim();
+      const memo = document.getElementById('memo').value.trim();
 
       try {
+        const accounts = await ultra.getAccounts();
+        const from = accounts[0]; // الحساب المتصل
+
+        const txObject = {
+          action: "transfer",
+          contract: "eosio.token",
+          data: {
+            from,
+            to,
+            quantity: `${parseFloat(amount).toFixed(8)} UOS`,
+            memo
+          }
+        };
+
         const response = await ultra.signTransaction(txObject);
         result.textContent = `✅ Transaction sent! Hash: ${response.data.transactionHash}`;
         result.classList.remove("text-red-600");
@@ -93,8 +151,16 @@
         result.textContent = `❌ Error: ${err.message || "Transaction declined"}`;
         result.classList.remove("text-green-600");
         result.classList.add("text-red-600");
+        console.log("❌", err);
       }
     });
+
+    // ✅ تشغيل عند تحميل الصفحة
+    if (document.readyState !== 'complete') {
+      window.addEventListener('load', afterWindowLoaded);
+    } else {
+      afterWindowLoaded();
+    }
   </script>
 </body>
 </html>
