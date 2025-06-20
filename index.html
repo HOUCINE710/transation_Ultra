@@ -6,6 +6,17 @@
   <title>Ultra Wallet Transfer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    body {
+      background: linear-gradient(135deg, #1e3a8a, #9333ea);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
     .slide-in-left {
       animation: slide-in 0.4s ease forwards;
     }
@@ -15,64 +26,62 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-purple-600 to-blue-500 flex flex-col items-center justify-center min-h-screen font-sans">
+<body class="flex items-center justify-center min-h-screen text-white">
 
-  <!-- ✅ Toast message -->
-  <div id="customToast" class="hidden fixed top-4 left-4 bg-gray-900 text-white p-4 rounded-lg shadow-2xl max-w-sm z-50 text-sm"></div>
+  <!-- ✅ Toast -->
+  <div id="customToast" class="hidden fixed top-6 left-6 bg-black bg-opacity-80 text-white p-4 rounded-lg shadow-2xl max-w-sm z-50 text-sm slide-in-left"></div>
 
-  <div class="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md">
-    <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">🚀 Send UOS Tokens</h1>
+  <div class="glass p-10 w-full max-w-lg shadow-2xl">
+    <h1 class="text-3xl font-extrabold text-center mb-8 text-white tracking-wide">🚀 Send UOS Tokens</h1>
 
-    <button onclick="loginWallet()" class="mb-6 w-full bg-green-600 text-white py-2.5 px-4 rounded-xl hover:bg-green-700 text-lg font-medium shadow-md transition">
-      🔐 Connect to Wallet
+    <div id="accountInfo" class="text-sm mb-6 text-center text-gray-200"></div>
+
+    <button onclick="loginWallet()" class="mb-6 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all">
+      🔐 Connect Wallet
     </button>
 
     <form id="transferForm" class="space-y-6">
       <div>
-        <label for="to" class="block text-sm font-semibold text-gray-700">To (recipient)</label>
-        <input type="text" id="to" name="to" placeholder="e.g. abc123xyz" class="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required />
+        <label for="to" class="block text-sm font-medium text-gray-100">Recipient Account</label>
+        <input type="text" id="to" name="to" placeholder="e.g. ab1cd2efg" class="mt-2 w-full bg-white bg-opacity-10 text-white placeholder-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
       </div>
 
       <div>
-        <label for="amount" class="block text-sm font-semibold text-gray-700">Amount (UOS)</label>
-        <input type="text" id="amount" name="amount" placeholder="e.g. 5.00000000" class="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required />
+        <label for="amount" class="block text-sm font-medium text-gray-100">Amount (UOS)</label>
+        <input type="number" id="amount" name="amount" placeholder="e.g. 12.50000000" class="mt-2 w-full bg-white bg-opacity-10 text-white placeholder-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
       </div>
 
       <div>
-        <label for="memo" class="block text-sm font-semibold text-gray-700">Memo (optional)</label>
-        <input type="text" id="memo" name="memo" placeholder="Message..." class="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        <label for="memo" class="block text-sm font-medium text-gray-100">Memo (optional)</label>
+        <input type="text" id="memo" name="memo" placeholder="e.g. payment" class="mt-2 w-full bg-white bg-opacity-10 text-white placeholder-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
       </div>
 
-      <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-xl hover:bg-blue-700 text-lg font-semibold transition shadow-md">
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all">
         💸 Send Transaction
       </button>
 
-      <p id="result" class="text-center text-sm mt-4 text-gray-600"></p>
+      <p id="result" class="text-center text-sm mt-4 text-gray-200"></p>
     </form>
   </div>
 
   <script>
     let connectedAccount = null;
 
-    function showCustomToast(id, messageHtml) {
+    function showCustomToast(id, html) {
       const toast = document.getElementById(id);
-      if (toast) {
-        toast.innerHTML = messageHtml;
-        toast.classList.remove('hidden');
-        toast.classList.add('slide-in-left');
-        setTimeout(() => {
-          toast.classList.add('hidden');
-        }, 5000);
-      }
+      toast.innerHTML = html;
+      toast.classList.remove("hidden");
+      toast.classList.add("slide-in-left");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 5000);
     }
 
     function afterWindowLoaded() {
       if (!window.ultra) {
-        showCustomToast('customToast', `
+        showCustomToast("customToast", `
           <strong class="block mb-1">⚠️ Ultra Wallet not found</strong>
-          <span>Please install it from
-            <a href="https://ultra.io/download" target="_blank" class="underline text-blue-400 font-bold">ultra.io/download</a>
-          </span>
+          <span>Please install from <a href="https://ultra.io/download" target="_blank" class="underline text-blue-400">ultra.io/download</a></span>
         `);
         return;
       }
@@ -84,10 +93,10 @@
         const response = await ultra.connect({ onlyIfTrusted: true });
         connectedAccount = response.data.blockchainid;
         localStorage.setItem('eagerlyConnection', 'true');
-        showCustomToast('customToast', `<strong>✅ Connected as:</strong> ${connectedAccount}`);
-      } catch (err) {
+        document.getElementById("accountInfo").innerHTML = `✅ Connected: <strong>${connectedAccount}</strong>`;
+      } catch {
         localStorage.removeItem('eagerlyConnection');
-        showCustomToast('customToast', `<strong>🔒 Not connected</strong><br/>Please login to your Ultra Wallet`);
+        document.getElementById("accountInfo").innerText = `🔌 Not connected`;
       }
     }
 
@@ -96,9 +105,10 @@
         const response = await ultra.connect({ referralCode: 'ecd1f052-9d0d-4b84-8dd3-10a753d044b5' });
         connectedAccount = response.data.blockchainid;
         localStorage.setItem('eagerlyConnection', 'true');
-        showCustomToast('customToast', `<strong>✅ Connected as:</strong> ${connectedAccount}`);
+        document.getElementById("accountInfo").innerHTML = `✅ Connected: <strong>${connectedAccount}</strong>`;
+        showCustomToast("customToast", `<strong>🔐 Wallet Connected</strong><br>${connectedAccount}`);
       } catch (err) {
-        showCustomToast('customToast', `<strong>❌ Error:</strong> ${err.message || "Connection failed"}`);
+        showCustomToast("customToast", `<strong>❌ Error:</strong> ${err.message || "Could not connect"}`);
       }
     }
 
@@ -107,16 +117,8 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      if (!window.ultra) {
-        result.textContent = "❌ Ultra Wallet not detected.";
-        return;
-      }
-
-      if (!connectedAccount) {
-        result.textContent = "⚠️ Please connect your wallet first.";
-        return;
-      }
+      if (!window.ultra) return result.textContent = "❌ Ultra Wallet not detected.";
+      if (!connectedAccount) return result.textContent = "⚠️ Please connect your wallet.";
 
       const to = document.getElementById('to').value.trim();
       const amount = document.getElementById('amount').value.trim();
@@ -135,16 +137,17 @@
 
       try {
         const response = await ultra.signTransaction(txObject);
-        result.textContent = `✅ Sent! Hash: ${response.data.transactionHash}`;
-        result.classList.remove("text-red-600");
-        result.classList.add("text-green-600");
+        result.textContent = `✅ Transaction Hash: ${response.data.transactionHash}`;
+        result.classList.remove("text-red-500");
+        result.classList.add("text-green-400");
       } catch (err) {
         result.textContent = `❌ Error: ${err.message || "Transaction declined"}`;
-        result.classList.remove("text-green-600");
-        result.classList.add("text-red-600");
+        result.classList.remove("text-green-400");
+        result.classList.add("text-red-500");
       }
     });
 
+    // Load on page ready
     if (document.readyState !== 'complete') {
       window.addEventListener('load', afterWindowLoaded);
     } else {
